@@ -86,7 +86,7 @@ def calculate_metrics(actual, pred):
     residuals_std = np.std(residuals)
     # print('Residuals mean: ', residuals_mean)
     # print('Residuals sd: ', residuals_std)
-    return [rmse, mae, mape, explained_variance_score, r2, residuals_mean, residuals_std]
+    return [rmse, mae, mape, r2]
 
     
 
