@@ -4,7 +4,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.svm import SVR
 from data.data_preparation import *
 from models.metrics_utils import calculate_metrics, predict_future
-from models.SVR.SVR_utils import fit_best_SVR_model_using_GridSearch
+from models.MLP.MLP_utils import fit_best_MLP_model_using_GridSearch
 from consts import BITCOIN_FILE, ETHEREUM_FILE, LITECOIN_FILE, RIPPLE_FILE, TETHER_FILE, CHAINLINK_FILE, NEM_FILE, \
     STELLAR_FILE
 
@@ -34,18 +34,18 @@ def explore_model(data_file, number_of_lags, use_scaler: int = 0):
     X, y = create_numpy_arrays_with_lags(data_train_with_lags, main_column=DEFAULT_PRICE_COLUMN_NAME)
 
     X_train, X_validate, y_train, y_validate = train_test_split(X, y, test_size=0.2, random_state=1)
-    svr_model = fit_best_SVR_model_using_GridSearch(X_train, y_train)
-    #svr_model = SVR(kernel='rbf', C=10, gamma=1e-02)  # bitcoin 1000, 1e-04
-    #svr_model.fit(X_train, y_train)
+    mlp_model = fit_best_MLP_model_using_GridSearch(X_train, y_train)
+    #mlp_model = SVR(kernel='rbf', C=10, gamma=1e-02)  # bitcoin 1000, 1e-04
+    #mlp_model.fit(X_train, y_train)
 
     if use_scaler == 0:
-        train_metrics = calculate_metrics(y_train, svr_model.predict(X_train))
-        validate_metrics = calculate_metrics(y_validate, svr_model.predict(X_validate))
+        train_metrics = calculate_metrics(y_train, mlp_model.predict(X_train))
+        validate_metrics = calculate_metrics(y_validate, mlp_model.predict(X_validate))
     else:
-        train_metrics = calculate_metrics(scaler.inverse_transform(y_train.reshape(-1, 1)), scaler.inverse_transform(svr_model.predict(X_train).reshape(-1, 1)))
-        validate_metrics = calculate_metrics(scaler.inverse_transform(y_validate.reshape(-1, 1)), scaler.inverse_transform(svr_model.predict(X_validate).reshape(-1, 1)))
+        train_metrics = calculate_metrics(scaler.inverse_transform(y_train.reshape(-1, 1)), scaler.inverse_transform(mlp_model.predict(X_train).reshape(-1, 1)))
+        validate_metrics = calculate_metrics(scaler.inverse_transform(y_validate.reshape(-1, 1)), scaler.inverse_transform(mlp_model.predict(X_validate).reshape(-1, 1)))
 
-    return svr_model.best_params_, train_metrics, validate_metrics
+    return mlp_model.best_params_, train_metrics, validate_metrics
 
 """
 for data_file in [BITCOIN_FILE, ETHEREUM_FILE, TETHER_FILE, RIPPLE_FILE, LITECOIN_FILE, STELLAR_FILE]:
@@ -61,7 +61,7 @@ def compare_models():
     train_table = []
     validate_table = []
     test_table = []
-    for data_file in [BITCOIN_FILE]: #, ETHEREUM_FILE, TETHER_FILE, RIPPLE_FILE, LITECOIN_FILE, STELLAR_FILE]:
+    for data_file in [STELLAR_FILE  ]: #, ETHEREUM_FILE, TETHER_FILE, RIPPLE_FILE, LITECOIN_FILE, STELLAR_FILE]:
         for number_of_lags in [7, 14, 21, 30, 90, 150]:
             print(f'******************* DOING {number_of_lags} LAGS *********************')
             for use_scaler in [0, 1, 2]:

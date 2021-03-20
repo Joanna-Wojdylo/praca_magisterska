@@ -4,7 +4,8 @@ from sklearn.model_selection import train_test_split
 from sklearn.svm import SVR
 from sklearn import metrics
 from data.data_preparation import *
-from models.SVR.SVR_utils import predict_future, fit_best_SVR_model_using_GridSearch, calculate_metrics
+from models.metrics_utils import calculate_metrics, predict_future
+from models.SVR.SVR_utils import fit_best_SVR_model_using_GridSearch
 from consts import BITCOIN_FILE, ETHEREUM_FILE, LITECOIN_FILE, RIPPLE_FILE, TETHER_FILE, STELLAR_FILE
 
 def prediction_possibilities_for_first_X_days():
