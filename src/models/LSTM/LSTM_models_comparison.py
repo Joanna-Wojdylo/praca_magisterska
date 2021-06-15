@@ -1,10 +1,13 @@
-
+import matplotlib.pyplot as plt
+from keras.models import Sequential
+from keras.layers import Dense
+from keras.layers import LSTM
+from keras.layers import Dropout
 import numpy as np
 from sklearn.model_selection import train_test_split
-from sklearn.svm import SVR
 from data.data_preparation import *
-from models.metrics_utils import calculate_metrics, predict_future
-from models.MLP.MLP_utils import fit_best_MLP_model_using_GridSearch
+from models.metrics_utils import calculate_metrics
+
 from consts import BITCOIN_FILE, ETHEREUM_FILE, LITECOIN_FILE, RIPPLE_FILE, TETHER_FILE, CHAINLINK_FILE, NEM_FILE, \
     STELLAR_FILE
 
@@ -34,34 +37,51 @@ def explore_model(data_file, number_of_lags, use_scaler: int = 0):
     X, y = create_numpy_arrays_with_lags(data_train_with_lags, main_column=DEFAULT_PRICE_COLUMN_NAME)
 
     X_train, X_validate, y_train, y_validate = train_test_split(X, y, test_size=0.2, random_state=1)
-    mlp_model = fit_best_MLP_model_using_GridSearch(X_train, y_train)
-    #mlp_model = SVR(kernel='rbf', C=10, gamma=1e-02)  # bitcoin 1000, 1e-04
-    #mlp_model.fit(X_train, y_train)
+    X_train = np.reshape(X_train, (X_train.shape[0], 1, X_train.shape[1]))
+    X_validate = np.reshape(X_validate, (X_validate.shape[0], 1, X_validate.shape[1]))
+    model = Sequential()
+    # Adding the first LSTM layer
+    # Two LSTM layers with 50 units, output layer of 1 neuron
+    model.add(LSTM(units=50, return_sequences=True, input_shape=(1, number_of_lags)))
+    # model.add(Dropout(0.2))
+
+    # Adding a second LSTM layer and some Dropout regularisation
+    model.add(LSTM(units=50, return_sequences=True))
+    # model.add(Dropout(0.2))
+
+    # # Adding a third LSTM layer and some Dropout regularisation
+    # model.add(LSTM(units=50, return_sequences=True))
+    # model.add(Dropout(0.2))
+    #
+    # # Adding a fourth LSTM layer and some Dropout regularisation
+    # model.add(LSTM(units=50))
+    # model.add(Dropout(0.2))
+
+    # Adding the output layer
+    model.add(Dense(units=1))
+
+    # Compiling the RNN
+    model.compile(optimizer='adam', loss='mean_squared_error')
+
+    # Fitting the RNN to the Training set
+    model.fit(X_train, y_train, epochs=100, batch_size=32)
 
     if use_scaler == 0:
-        train_metrics = calculate_metrics(y_train, mlp_model.predict(X_train))
-        validate_metrics = calculate_metrics(y_validate, mlp_model.predict(X_validate))
+        train_metrics = calculate_metrics(y_train, model.predict(X_train).reshape(X_train.shape[0], ))
+        validate_metrics = calculate_metrics(y_validate, model.predict(X_validate).reshape(X_validate.shape[0], ))
     else:
-        train_metrics = calculate_metrics(scaler.inverse_transform(y_train.reshape(-1, 1)), scaler.inverse_transform(mlp_model.predict(X_train).reshape(-1, 1)))
-        validate_metrics = calculate_metrics(scaler.inverse_transform(y_validate.reshape(-1, 1)), scaler.inverse_transform(mlp_model.predict(X_validate).reshape(-1, 1)))
+        train_metrics = calculate_metrics(scaler.inverse_transform(y_train.reshape(-1, 1)), scaler.inverse_transform(model.predict(X_train).reshape(X_train.shape[0], ).reshape(-1, 1)))
+        validate_metrics = calculate_metrics(scaler.inverse_transform(y_validate.reshape(-1, 1)), scaler.inverse_transform(model.predict(X_validate).reshape(X_validate.shape[0], ).reshape(-1, 1)))
 
-    return mlp_model.best_params_, train_metrics, validate_metrics
-
-"""
-for data_file in [BITCOIN_FILE, ETHEREUM_FILE, TETHER_FILE, RIPPLE_FILE, LITECOIN_FILE, STELLAR_FILE]:
-    for number_of_days_ahead in [10, 30, 90, 150]:
-        for number_of_lags in [10, 30, 90, 150, 365]:
-            for use_scaler in [True, False]:
-                explore_model(data_file, number_of_lags, number_of_days_ahead, use_scaler)
-"""
+    return train_metrics, validate_metrics
 
 
 def compare_models():
-    columns_naming = ['data', 'lags used', 'transformation', 'chosen model', 'RMSE', 'MAE', 'MAPE', 'R2']
+    columns_naming = ['data', 'lags used', 'transformation', 'RMSE', 'MAE', 'MAPE', 'R2']
     train_table = []
     validate_table = []
     test_table = []
-    for data_file in [STELLAR_FILE]: #, ETHEREUM_FILE, TETHER_FILE, RIPPLE_FILE, LITECOIN_FILE, STELLAR_FILE]:
+    for data_file in [TETHER_FILE]:
         for number_of_lags in [7, 14, 21, 30, 90, 150]:
             print(f'******************* DOING {number_of_lags} LAGS *********************')
             for use_scaler in [0, 1, 2]:
@@ -71,9 +91,9 @@ def compare_models():
                     scaler_text = 'Standardized'
                 else:
                     scaler_text = 'Normalized into (-1,1)'
-                best_score, train_metrics, validate_metrics = explore_model(data_file, number_of_lags, use_scaler)
-                train_table.append([data_file, number_of_lags, scaler_text, best_score] + train_metrics)
-                validate_table.append([data_file, number_of_lags, scaler_text, best_score] + validate_metrics)
+                train_metrics, validate_metrics = explore_model(data_file, number_of_lags, use_scaler)
+                train_table.append([data_file, number_of_lags, scaler_text] + train_metrics)
+                validate_table.append([data_file, number_of_lags, scaler_text] + validate_metrics)
     train_df = pd.DataFrame.from_records(train_table)
     train_df.columns = columns_naming
     train_df.to_csv('data/processed/train_df_scores.csv', index=False)
@@ -81,13 +101,6 @@ def compare_models():
     validate_df.columns = columns_naming
     validate_df.to_csv('data/processed/validate_df_scores.csv', index=False)
 
-'''
-print(train_df.head())
-print('---------------------')
-print(validate_df.head())
-print('---------------------')
-print(test_df.head())
-'''
 
 compare_models()
 #explore_model(BITCOIN_FILE, 10, use_scaler=2)

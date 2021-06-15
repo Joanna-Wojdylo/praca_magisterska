@@ -41,7 +41,7 @@ def perform_MLP_on_data(data_file: str, number_of_lags: int, use_scaler: int, nu
     # print('number of train days: ', X_train.shape)
     # print('number of validate days: ', X_validate.shape)
     #mlp_model = fit_best_MLP_model_using_GridSearch(X_train, y_train)
-    mlp_model = MLPRegressor(hidden_layer_sizes=(50,), max_iter=250)
+    mlp_model = MLPRegressor(hidden_layer_sizes=(50, 50, 50), max_iter=250)
     mlp_model.fit(X_train, y_train)
     #print('Selected MLP layers: ', mlp_model.n_layers_)
     #print('Selected MLP parameters: ', mlp_model.get_params())
@@ -74,36 +74,24 @@ def perform_MLP_on_data(data_file: str, number_of_lags: int, use_scaler: int, nu
 
     print(calculate_metrics(y_test, y_pred))
 
-
     if scaler:
         plt.figure(figsize=(12, 6))
-        # plt.plot(data_test[DEFAULT_PRICE_COLUMN_NAME], color='blue', label= 'y')
-        plt.plot(data_all[DEFAULT_PRICE_COLUMN_NAME], color='blue', label='dane historyczne')
-        plt.plot(inverse_scaler_on_df_column(scaler, predict_future(data_train, number_of_lags, mlp_model, number_of_days_ahead))[DEFAULT_PRICE_COLUMN_NAME], color='red', label='prognozy na zbiorze testowym')
-        plt.plot(data_train.index[number_of_lags:], scaler.inverse_transform(mlp_model.predict(X).reshape(-1, 1)), color='orange', label='prognozy na zbiorze uczącym i walidacyjnym')
-
-        # plt.plot(dates_train, clf.predict(X_test), color= 'red', label= 'RBF model')
-        # plt.plot(dates_test, scaler.inverse_transform(svr_rbf.predict(dates_test)), color= 'green', label= 'RBF model')
-        plt.xlabel('Data')
-        plt.ylabel('Cena')
-        plt.title('Porównanie notowań historycznych oraz wartości prognozowanych modelem SVR')
-        plt.legend()
-        # plt.savefig('D://Studia//W8//Praca magisterska//30lag-30days-prediction.png')
-        plt.show()
-    else:
-        plt.figure(figsize=(12, 6))
-        # plt.plot(ethereum_test[DEFAULT_PRICE_COLUMN_NAME], color='blue', label= 'y')
-        plt.plot(data_all[DEFAULT_PRICE_COLUMN_NAME], color='blue', label='dane historyczne')
-        plt.plot(predict_future(data_train, number_of_lags, mlp_model, number_of_days_ahead)[DEFAULT_PRICE_COLUMN_NAME],
-                 color='red', label='prognozy na zbiorze testowym')
-        plt.plot(data_train.index[number_of_lags:], mlp_model.predict(X), color='orange', label='prognozy na zbiorze uczącym i walidacyjnym')
-
-        # plt.plot(dates_train, clf.predict(X_test), color= 'red', label= 'RBF model')
-        # plt.plot(dates_test, scaler.inverse_transform(svr_rbf.predict(dates_test)), color= 'green', label= 'RBF model')
+        plt.plot(data_all[DEFAULT_PRICE_COLUMN_NAME], color='blue', label='historical data')
+        plt.plot(inverse_scaler_on_df_column(scaler, predict_future(data_train, number_of_lags, mlp_model, number_of_days_ahead))[DEFAULT_PRICE_COLUMN_NAME], color='red', label='predictions on the test set')
+        plt.plot(data_train.index[number_of_lags:], scaler.inverse_transform(mlp_model.predict(X).reshape(-1, 1)), color='orange', label='predictions on training and validation sets')
         plt.xlabel('Date')
         plt.ylabel('Price')
         plt.legend()
-        # plt.savefig('D://Studia//W8//Praca magisterska//30lag-30days-prediction.png')
+        plt.show()
+    else:
+        plt.figure(figsize=(12, 6))
+        plt.plot(data_all[DEFAULT_PRICE_COLUMN_NAME], color='blue', label='historical data')
+        plt.plot(predict_future(data_train, number_of_lags, mlp_model, number_of_days_ahead)[DEFAULT_PRICE_COLUMN_NAME],
+                 color='red', label='predictions on the test set')
+        plt.plot(data_train.index[number_of_lags:], mlp_model.predict(X), color='orange', label='predictions on training and validation sets')
+        plt.xlabel('Date')
+        plt.ylabel('Price')
+        plt.legend()
         plt.show()
 
     '''
@@ -169,4 +157,4 @@ def perform_MLP_on_data(data_file: str, number_of_lags: int, use_scaler: int, nu
         print(calculate_metrics(data_test[DEFAULT_PRICE_COLUMN_NAME].values, mlp_model.predict(X_all)[-data_test.size:]))
 
 
-perform_MLP_on_data(TETHER_FILE, number_of_lags=7, use_scaler=1)
+perform_MLP_on_data(STELLAR_FILE, number_of_lags=90, use_scaler=1, number_of_days_ahead_in_recursive_forecast=147)
